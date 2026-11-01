@@ -1,36 +1,31 @@
-import streamlit as st
 import json
 import os
+import streamlit as st
 
-# --- ページ基本設定 ---
+# --- ページ基本設定（必ず最初に記述） ---
 st.set_page_config(
-    page_title="NEURO_NEWS // 認知分析端末",
-    page_layout="wide",
+    page_title="Kaleido // 認知整理端末",
+    layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # --- サイバーパンク風 Custom CSS ---
 st.markdown("""
 <style>
-    /* 全体背景とベースフォント */
     .stApp {
         background-color: #080b11;
         color: #00f0ff;
         font-family: 'Consolas', 'Courier New', monospace;
     }
-    
-    /* ヘッダータイトル */
     .cyber-title {
         font-size: 2.2rem;
         font-weight: 800;
         color: #00f0ff;
-        text-shadow: 0 0 10px rgba(0, 240, 255, 0.7), 0 0 20px rgba(0, 240, 255, 0.4);
+        text-shadow: 0 0 10px rgba(0, 240, 255, 0.7);
         border-bottom: 2px solid #ff0055;
         padding-bottom: 10px;
         margin-bottom: 25px;
     }
-    
-    /* ニュースカード */
     .news-box {
         background: rgba(15, 23, 42, 0.75);
         border: 1px solid #00f0ff;
@@ -38,18 +33,12 @@ st.markdown("""
         border-radius: 4px;
         padding: 18px;
         margin-bottom: 20px;
-        box-shadow: 0 0 12px rgba(0, 240, 255, 0.15);
     }
-    
-    /* ニュースタイトル */
     .news-title {
         color: #ffffff;
         font-size: 1.3rem;
         font-weight: bold;
-        text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
     }
-
-    /* 4人のペルソナ別コラムカード (ネオンカラー切り替え) */
     .persona-card {
         background: rgba(20, 24, 38, 0.85);
         border-radius: 6px;
@@ -58,12 +47,10 @@ st.markdown("""
         font-size: 0.95rem;
         line-height: 1.6;
     }
-    
-    .persona-1 { border: 1px solid #ff0055; box-shadow: 0 0 8px rgba(255, 0, 85, 0.2); } /* 歴史視点 */
-    .persona-2 { border: 1px solid #00ffaa; box-shadow: 0 0 8px rgba(0, 255, 170, 0.2); } /* 心理対話 */
-    .persona-3 { border: 1px solid #00f0ff; box-shadow: 0 0 8px rgba(0, 240, 255, 0.2); } /* システム */
-    .persona-4 { border: 1px solid #ffaa00; box-shadow: 0 0 8px rgba(255, 170, 0, 0.2); } /* 達観生活 */
-
+    .persona-1 { border: 1px solid #ff0055; }
+    .persona-2 { border: 1px solid #00ffaa; }
+    .persona-3 { border: 1px solid #00f0ff; }
+    .persona-4 { border: 1px solid #ffaa00; }
     .persona-tag {
         font-weight: bold;
         font-size: 0.85rem;
@@ -80,8 +67,8 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- タイトル表示 ---
-st.markdown('<div class="cyber-title">SYSTEM // NEURO_NEWS [認知整理端末]</div>', unsafe_allow_html=True)
-st.caption("国内の最新トピック3件に対し、多角的な視点（メタ認知）を持つ4人の仮想アナリストがコラムを展開します。")
+st.markdown('<div class="cyber-title">KALEIDO // 認知整理端末</div>', unsafe_allow_html=True)
+st.caption("国内の最新トピックに対し、多角的な視点を持つ4人の仮想アナリストがコラムを展開します。")
 
 # --- データ読み込み ---
 if os.path.exists("news.json"):
@@ -91,9 +78,8 @@ else:
     news_data = []
 
 if not news_data:
-    st.info("⚡ 現在、システムデータを同期中です。手動実行または自動更新をお待ちください。")
+    st.info("⚡ 現在、システムデータを同期中です。GitHub Actionsの実行または手動更新をお待ちください。")
 else:
-    # 今日のニュース3件をループ表示
     for idx, item in enumerate(news_data[:3]):
         st.markdown(f"""
         <div class="news-box">
@@ -103,7 +89,6 @@ else:
         </div>
         """, unsafe_allow_html=True)
         
-        # 4人のコラムをタブ形式で整理
         cols = item.get("columns", {})
         tab1, tab2, tab3, tab4 = st.tabs([
             "🏛️ 大局・歴史視点", 
