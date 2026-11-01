@@ -1,0 +1,53 @@
+name: update-news
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '59 19 * * *' # 日本時間 朝4時59分（UTC 19:59）に自動実行
+
+jobs:
+  run-update:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install google-genai streamlit
+
+      - name: Run update script with retry
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          for i in 1 2 3; do
+            echo "=== 試行回数: $i 回目 ==="
+            if python update_news.py; then
+              echo "更新に成功しました"
+              exit 0
+            else
+              echo "エラーが発生しました"
+              if [ $i -lt 3 ]; then
+                echo "10分間待機して再試行します..."
+                sleep 600
+              else
+                echo "3回失敗したため終了します"
+                exit 1
+              fi
+            fi
+          done
+
+      - name: Commit and push news.json
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Auto-update cognitive news data"
+          file_pattern: "news.json"
