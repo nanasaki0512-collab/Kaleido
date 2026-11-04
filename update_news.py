@@ -6,7 +6,7 @@ from google import genai
 # ニュース取得元（Googleニュース、Yahoo!ニュースのRSS）
 RSS_URLS = [
     "https://news.google.com/rss?hl=ja&gl=JP&ceid=JP:ja",          # Google ニュース Top
-    "https://yahoo.co.jp/rss/topics/top-picks.xml",            # Yahoo! ニュース 主要
+    "https://news.yahoo.co.jp/rss/topics/top-picks.xml",            # Yahoo! ニュース 主要
     "https://news.yahoo.co.jp/rss/topics/world.xml",                # Yahoo! ニュース 国際
     "https://news.yahoo.co.jp/rss/topics/business.xml"              # Yahoo! ニュース 経済
 ]
@@ -83,8 +83,9 @@ def generate_kaleido_news():
 }}
 """
 
+    # モデル名を最新の gemini-3.8-flash に変更
     response = client.models.generate_content(
-        model="gemini-2.5-flash",
+        model="gemini-3.8-flash",
         contents=prompt,
         config={
             "response_mime_type": "application/json"
@@ -95,7 +96,7 @@ def generate_kaleido_news():
         data = json.loads(response.text)
         with open("news.json", "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
-        print("news.json updated successfully with Date and updated Personas!")
+        print("news.json updated successfully with gemini-3.8-flash!")
     except Exception as e:
         print(f"Error parsing or saving JSON: {e}")
         print("Raw output:", response.text)
