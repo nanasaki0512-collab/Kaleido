@@ -1,1 +1,1 @@
-# Kaleido2
+# Kaleido
