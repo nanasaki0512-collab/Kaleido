@@ -1,53 +1,36 @@
-name: update-news
+name: Update News
 
 on:
-  workflow_dispatch:
   schedule:
-    - cron: '59 19 * * *' # 日本時間 朝4時59分（UTC 19:59）に自動実行
+    - cron: '59 19 * * *' # 毎日日本時間 朝4時59分 (UTC 19:59)
+  workflow_dispatch: # 手動でもすぐ実行できるようにする
 
 jobs:
-  run-update:
+  update:
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: write
-
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
+      # ★ここで requirements.txt に書かれた部品（feedparserやgoogle-genai等）をインストールします
       - name: Install dependencies
         run: |
-          pip install google-genai streamlit
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-      - name: Run update script with retry
+      - name: Run update script
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          for i in 1 2 3; do
-            echo "=== 試行回数: $i 回目 ==="
-            if python update_news.py; then
-              echo "更新に成功しました"
-              exit 0
-            else
-              echo "エラーが発生しました"
-              if [ $i -lt 3 ]; then
-                echo "10分間待機して再試行します..."
-                sleep 600
-              else
-                echo "3回失敗したため終了します"
-                exit 1
-              fi
-            fi
-          done
+          python update_news.py
 
       - name: Commit and push news.json
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzweifel/git-auto-commit-action@v4
         with:
-          commit_message: "Auto-update cognitive news data"
-          file_pattern: "news.json"
+          commit_message: "Auto-update news.json"
+          file_pattern: news.json
