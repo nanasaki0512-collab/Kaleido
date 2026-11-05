@@ -1,12 +1,14 @@
 import json
 import os
+import time
 import feedparser
 from google import genai
+from google.genai.errors import ServerError, APIError
 
 # ニュース取得元（Googleニュース、Yahoo!ニュースのRSS）
 RSS_URLS = [
     "https://news.google.com/rss?hl=ja&gl=JP&ceid=JP:ja",          # Google ニュース Top
-    "https://news.yahoo.co.jp/rss/topics/top-picks.xml",            # Yahoo! ニュース 主要
+    "https://yahoo.co.jp/rss/topics/top-picks.xml",            # Yahoo! ニュース 主要
     "https://news.yahoo.co.jp/rss/topics/world.xml",                # Yahoo! ニュース 国際
     "https://news.yahoo.co.jp/rss/topics/business.xml"              # Yahoo! ニュース 経済
 ]
@@ -83,23 +85,39 @@ def generate_kaleido_news():
 }}
 """
 
-    # モデル名を最新の gemini-3.8-flash に変更
-    response = client.models.generate_content(
-        model="gemini-3.8-flash",
-        contents=prompt,
-        config={
-            "response_mime_type": "application/json"
-        }
-    )
+    # 混雑エラー対策：試行回数に応じて待ち時間を長くする（1回失敗後30秒、2回失敗後60秒）
+    max_retries = 3
+    retry_delays = [30, 60]  # 秒
 
-    try:
-        data = json.loads(response.text)
-        with open("news.json", "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-        print("news.json updated successfully with gemini-3.8-flash!")
-    except Exception as e:
-        print(f"Error parsing or saving JSON: {e}")
-        print("Raw output:", response.text)
+    for attempt in range(1, max_retries + 1):
+        try:
+            print(f"Gemini API リクエスト送信中... (試行回数: {attempt}/{max_retries})")
+            response = client.models.generate_content(
+                model="gemini-3.8-flash",
+                contents=prompt,
+                config={
+                    "response_mime_type": "application/json"
+                }
+            )
+
+            # 成功したらJSONを保存して終了
+            data = json.loads(response.text)
+            with open("news.json", "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            print("news.json updated successfully!")
+            return
+
+        except (ServerError, APIError) as e:
+            print(f"サーバー混雑エラーが発生しました (試行 {attempt}回目): {e}")
+            if attempt < max_retries:
+                wait_time = retry_delays[attempt - 1]
+                print(f"{wait_time}秒待機してサーバーの混雑緩和を待ちます...")
+                time.sleep(wait_time)
+            else:
+                raise Exception("3回連続でサーバー混雑エラーが発生したため終了します。")
+        except Exception as e:
+            print(f"予期せぬエラーが発生しました: {e}")
+            raise e
 
 if __name__ == "__main__":
     generate_kaleido_news()
