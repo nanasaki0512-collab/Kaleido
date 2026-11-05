@@ -1,6 +1,7 @@
 import json
 import os
 import time
+import urllib.request
 import feedparser
 from google import genai
 from google.genai.errors import ServerError, APIError
@@ -8,35 +9,48 @@ from google.genai.errors import ServerError, APIError
 # ニュース取得元（Googleニュース、Yahoo!ニュースのRSS）
 RSS_URLS = [
     "https://news.google.com/rss?hl=ja&gl=JP&ceid=JP:ja",          # Google ニュース Top
-    "https://yahoo.co.jp/rss/topics/top-picks.xml",            # Yahoo! ニュース 主要
+    "https://news.yahoo.co.jp/rss/topics/top-picks.xml",            # Yahoo! ニュース 主要
     "https://news.yahoo.co.jp/rss/topics/world.xml",                # Yahoo! ニュース 国際
     "https://news.yahoo.co.jp/rss/topics/business.xml"              # Yahoo! ニュース 経済
 ]
 
 def fetch_latest_news(max_items=15):
     """
-    Googleニュース・YahooニュースのRSSから最新記事と配信日時を取得する
+    タイムアウト付きでRSSフィードを取得する安全な関数
     """
     articles = []
     seen_titles = set()
 
     for url in RSS_URLS:
-        feed = feedparser.parse(url)
-        for entry in feed.entries:
-            title = entry.get('title', '').strip()
-            pub_date = entry.get('published', entry.get('updated', '日付不明'))
+        try:
+            # 5秒でタイムアウトさせる設定でURLを開く
+            req = urllib.request.Request(
+                url, 
+                headers={'User-Agent': 'Mozilla/5.0'}
+            )
+            with urllib.request.urlopen(req, timeout=5) as res:
+                html_content = res.read()
+                feed = feedparser.parse(html_content)
+                
+                for entry in feed.entries:
+                    title = entry.get('title', '').strip()
+                    pub_date = entry.get('published', entry.get('updated', '日付不明'))
+                    
+                    if title and title not in seen_titles:
+                        seen_titles.add(title)
+                        summary = entry.get('summary', title)
+                        articles.append(
+                            f"- 【タイトル】{title}\n"
+                            f"  【日時】{pub_date}\n"
+                            f"  【概要】{summary[:120]}"
+                        )
+                    
+                    if len(articles) >= max_items:
+                        break
+        except Exception as e:
+            print(f"RSS取得スキップ ({url}): {e}")
+            continue
             
-            if title and title not in seen_titles:
-                seen_titles.add(title)
-                summary = entry.get('summary', title)
-                articles.append(
-                    f"- 【タイトル】{title}\n"
-                    f"  【日時】{pub_date}\n"
-                    f"  【概要】{summary[:120]}"
-                )
-            
-            if len(articles) >= max_items:
-                break
         if len(articles) >= max_items:
             break
             
@@ -45,10 +59,11 @@ def fetch_latest_news(max_items=15):
 def generate_kaleido_news():
     raw_news = fetch_latest_news()
     
-    # Gemini API クライアント初期化
+    if not raw_news:
+        raise Exception("ニュースの取得に失敗しました（すべてのRSSがタイムアウトまたは空です）。")
+
     client = genai.Client()
     
-    # プロンプトの構築
     prompt = f"""
 以下は現在GoogleニュースおよびYahoo!ニュースから配信されている最新ニュースのリストです：
 
@@ -85,9 +100,8 @@ def generate_kaleido_news():
 }}
 """
 
-    # 混雑エラー対策：試行回数に応じて待ち時間を長くする（1回失敗後30秒、2回失敗後60秒）
     max_retries = 3
-    retry_delays = [30, 60]  # 秒
+    retry_delays = [30, 60]
 
     for attempt in range(1, max_retries + 1):
         try:
@@ -100,7 +114,6 @@ def generate_kaleido_news():
                 }
             )
 
-            # 成功したらJSONを保存して終了
             data = json.loads(response.text)
             with open("news.json", "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
