@@ -61,7 +61,7 @@ if not articles:
       "バックエンドの更新を実行するか、しばらくお待ちください。"
   )
 else:
-  # 添付していただいた実際の画像ファイル名にマッピング
+  # 年齢を完全に排除し、正しい画像ファイル名にマッピング
   persona_info = {
       "history": {
           "name": "歴史学者",
@@ -105,7 +105,7 @@ else:
 
       st.markdown("---")
 
-      # 4人のペルソナタブ
+      # 4人のペルソナタブ（年齢表示なし）
       columns_data = article.get("columns", {})
       tab_keys = list(persona_info.keys())
       tab_labels = [persona_info[k]["name"] for k in tab_keys]
@@ -116,13 +116,13 @@ else:
         with tabs[i]:
           p_info = persona_info[k]
 
-          # 画像と視点説明を横並びに表示
+          # アイコン画像と視点説明を横並びに表示
           col1, col2 = st.columns([1, 8])
           with col1:
             try:
               st.image(p_info["icon"], width=60)
             except Exception:
-              st.write("🖼️")
+              st.write("🖼️ 画像なし")
           with col2:
             st.markdown(
                 f"**【視点】** <span style='color:{p_info['color']}'>"
