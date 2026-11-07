@@ -15,9 +15,6 @@ RSS_URLS = [
 ]
 
 def fetch_latest_news(max_items=15):
-    """
-    タイムアウト付きでRSSフィードを取得する安全な関数
-    """
     articles = []
     seen_titles = set()
 
@@ -59,11 +56,10 @@ def generate_kaleido_news():
     raw_news = fetch_latest_news()
     
     if not raw_news:
-        raise Exception("ニュースの取得に失敗しました（すべてのRSSがタイムアウトまたは空です）。")
+        raise Exception("ニュースの取得に失敗しました。")
 
     client = genai.Client()
     
-    # プロンプトの構築（文字数・言葉遣い・エッセイストの性格変更を指示）
     prompt = f"""
 以下は現在GoogleニュースおよびYahoo!ニュースから配信されている最新ニュースのリストです：
 
@@ -92,9 +88,9 @@ def generate_kaleido_news():
       "title": "ニュースのタイトル",
       "summary": "ニュースの詳細な要約（300〜500字程度、わかりやすい言葉で）",
       "columns": {{
-        "history": "歴史学者としてのコメント（300〜500字程度、専門用語を使わず簡単な言葉で）",
-        "mediator": "仲裁者としてのコメント（300〜500字程度、専門用語を使わず簡単な言葉で）",
-        "structure": "社会起業家としてのコメント（300〜500字程度、専門用語を使わず簡単な言葉で）",
+        "history": "歴史学者としてのコメント（300〜500字程度、簡単な言葉で）",
+        "mediator": "仲裁者としてのコメント（300〜500字程度、簡単な言葉で）",
+        "structure": "社会起業家としてのコメント（300〜500字程度、簡単な言葉で）",
         "lifestyle": "エッセイストとしてのコメント（300〜500字程度、執着がなく達観したトーン、簡単な言葉で）"
       }}
     }}
