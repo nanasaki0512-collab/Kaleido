@@ -61,31 +61,31 @@ if not articles:
       "バックエンドの更新を実行するか、しばらくお待ちください。"
   )
 else:
-  # ペルソナの定義（仲裁者、社会起業家の設定を反映）
+  # 添付していただいた実際の画像ファイル名にマッピング
   persona_info = {
       "history": {
           "name": "歴史学者",
-          "age_role": "70代",
           "desc": "超長期的視点（10年後・100年後からの大局観）",
           "color": "#ffaa00",
+          "icon": "歴史学者_白背景.png",
       },
       "mediator": {
           "name": "仲裁者",
-          "age_role": "50代",
           "desc": "当事者間の隠れたニーズ整理・合意形成の支援",
           "color": "#00ccff",
+          "icon": "仲裁者_白背景.png",
       },
       "structure": {
           "name": "社会起業家",
-          "age_role": "40代",
           "desc": "実利主義・課題解決思考・数字思考（共感性低）",
           "color": "#ff0055",
+          "icon": "社会起業家_白背景.png",
       },
       "lifestyle": {
           "name": "エッセイスト",
-          "age_role": "60代",
-          "desc": "達観・ユーモア・足元の暮らしの重視",
+          "desc": "執着なく物事を受け流す、達観したユーモア",
           "color": "#00ff66",
+          "icon": "エッセイスト_白背景.png",
       },
   }
 
@@ -108,21 +108,28 @@ else:
       # 4人のペルソナタブ
       columns_data = article.get("columns", {})
       tab_keys = list(persona_info.keys())
-      tab_labels = [
-          f"{persona_info[k]['age_role']}・{persona_info[k]['name']}"
-          for k in tab_keys
-      ]
+      tab_labels = [persona_info[k]["name"] for k in tab_keys]
 
       tabs = st.tabs(tab_labels)
 
       for i, k in enumerate(tab_keys):
         with tabs[i]:
           p_info = persona_info[k]
-          st.markdown(
-              f"**【視点】** <span style='color:{p_info['color']}'>"
-              f"{p_info['desc']}</span>",
-              unsafe_allow_html=True,
-          )
+
+          # 画像と視点説明を横並びに表示
+          col1, col2 = st.columns([1, 8])
+          with col1:
+            try:
+              st.image(p_info["icon"], width=60)
+            except Exception:
+              st.write("🖼️")
+          with col2:
+            st.markdown(
+                f"**【視点】** <span style='color:{p_info['color']}'>"
+                f"{p_info['desc']}</span>",
+                unsafe_allow_html=True,
+            )
+
           comment = columns_data.get(k, "コメントがありません。")
           st.markdown(f"> {comment}")
 
