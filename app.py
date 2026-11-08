@@ -1,4 +1,5 @@
 import json
+import os
 import streamlit as st
 
 # ページ設定 (ダークモード・ワイドレイアウト)
@@ -47,11 +48,15 @@ st.markdown(
 
 
 def load_news():
-  try:
-    with open("news.json", "r", encoding="utf-8") as f:
-      return json.load(f).get("articles", [])
-  except FileNotFoundError:
-    return []
+  """キャッシュを使用せず、毎回必ずファイルから最新のデータを直接読み込む"""
+  if os.path.exists("news.json"):
+    try:
+      # 毎回ファイルを新しく開いて読み込むため、古いデータが残りません
+      with open("news.json", "r", encoding="utf-8") as f:
+        return json.load(f).get("articles", [])
+    except Exception:
+      return []
+  return []
 
 
 st.title("🔮 Kaleido [カレイド]")
@@ -60,6 +65,7 @@ st.markdown(
 )
 st.markdown("---")
 
+# ページを開く・またはリロードするたびに常に最新のJSONをロード
 articles = load_news()
 
 if not articles:
@@ -68,7 +74,7 @@ if not articles:
       "バックエンドの更新を実行するか、しばらくお待ちください。"
   )
 else:
-  # ペルソナの定義（画像なし、新ペルソナ「賢者」を追加）
+  # ペルソナの定義
   persona_info = {
       "history": {
           "name": "歴史学者",
@@ -113,7 +119,7 @@ else:
       st.subheader(article.get("title", "タイトルなし"))
       st.write(f"**【要約】** {article.get('summary', '')}")
 
-      # 最初の欄に「世間の反応」を追加
+      # 世間の反応欄
       public_reaction = article.get("public_reaction", "")
       if public_reaction:
         st.markdown(
@@ -124,7 +130,7 @@ else:
 
       st.markdown("---")
 
-      # 5人のペルソナタブ（顔写真は削除済み）
+      # ペルソナタブ
       columns_data = article.get("columns", {})
       tab_keys = list(persona_info.keys())
       tab_labels = [persona_info[k]["name"] for k in tab_keys]
