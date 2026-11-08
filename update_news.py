@@ -6,15 +6,14 @@ import feedparser
 from google import genai
 from google.genai.errors import ServerError, APIError
 
-# ニュース取得元（Googleニュース、Yahoo!ニュースのRSS）
 RSS_URLS = [
-    "https://news.google.com/rss?hl=ja&gl=JP&ceid=JP:ja",          # Google ニュース Top
-    "https://yahoo.co.jp/rss/topics/top-picks.xml",            # Yahoo! ニュース 主要
-    "https://news.yahoo.co.jp/rss/topics/world.xml",                # Yahoo! ニュース 国際
-    "https://news.yahoo.co.jp/rss/topics/business.xml"              # Yahoo! ニュース 経済
+    "https://news.google.com/rss?hl=ja&gl=JP&ceid=JP:ja",
+    "https://yahoo.co.jp/rss/topics/top-picks.xml",
+    "https://news.yahoo.co.jp/rss/topics/world.xml",
+    "https://news.yahoo.co.jp/rss/topics/business.xml"
 ]
 
-def fetch_latest_news(max_items=15):
+def fetch_latest_news(max_items=20):
     articles = []
     seen_titles = set()
 
@@ -52,11 +51,24 @@ def fetch_latest_news(max_items=15):
             
     return "\n".join(articles)
 
+def load_existing_news():
+    if os.path.exists("news.json"):
+        try:
+            with open("news.json", "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return data.get("articles", [])
+        except Exception:
+            return []
+    return []
+
 def generate_kaleido_news():
     raw_news = fetch_latest_news()
-    
     if not raw_news:
         raise Exception("ニュースの取得に失敗しました。")
+
+    existing_articles = load_existing_news()
+    existing_titles = [art.get("title", "") for art in existing_articles]
+    existing_titles_str = "\n".join([f"- {t}" for t in existing_titles[-50:]]) # 直近50件のタイトルを参考として渡す
 
     client = genai.Client()
     
@@ -65,17 +77,23 @@ def generate_kaleido_news():
 
 {raw_news}
 
-上記の中から、世の中の関心が高く、多角的な視点で深掘りする価値のある重要ニュースを「3件」厳選してください。
+【重要：重複の禁止】
+以下の「すでに過去に作成したニュースのタイトル一覧」に含まれるニュース、またはこれらと酷似したテーマ・内容のニュースは**絶対に選ばないでください**。完全に新しいテーマの重要ニュースを「3件」厳選してください。
 
-選んだ3件のニュースそれぞれに対し、以下の4人の仮想アナリスト（ペルソナ）になりきってコラムを作成してください。
-※専門用語を避け、一般の人にも理解できる「簡単でわかりやすい言葉」を使ってください。
-※ニュースの要約、および4人のコメントは、それぞれ **必ず300字〜500字程度のボリューム** で詳しく記述してください。
+■ 過去に作成したニュースのタイトル一覧：
+{existing_titles_str}
 
-【ペルソナ定義】
-1. history（歴史学者）: 超長期的視点（10年後・100年後からの大局観）。
-2. mediator（仲裁者）: 当事者全員の隠れたニーズや本質的な課題を整理し、当事者同士が納得できる解決策（妥協点・合意）を見つけ出せるよう支援する視点。
-3. structure（社会起業家）: 実利主義、課題解決思考、数字思考に基づくシステム構造分析。共感性は低め。
-4. lifestyle（エッセイスト）: 執着が一切なく、物事を気楽に受け流し、こだわりを手放した達観したキャラクター。世間の諍いやニュースに対しても「まあ、なるようにしかならないさ」と風のように軽やかに捉え、肩の力が抜けたユーモアを語る。
+上記を踏まえ、選んだ新しい3件のニュースそれぞれに対し、以下の構成でコラムを作成してください。
+※専門用語（ビジネス用語や難しい言葉）は一切使わず、小学生や一般の人でもスッと理解できる簡単な言葉だけで記述してください。
+※「世間の反応」、ニュースの要約、および5人の専門家のコメントは、それぞれ **必ず300字〜500字程度のボリューム** で詳しく記述してください。
+
+【構成・ペルソナ定義】
+1. public_reaction（世間の反応）: このニュースに対して、ネットや世間一般の人々がどのように受け止め、どんな声を上げているか、その空気感や反応を300〜500字で解説。
+2. history（歴史学者）: 超長期的視点（10年後・100年後からの大局観）から分かりやすく解説。
+3. mediator（仲裁者）: 当事者全員の隠れた気持ちやぶつかり合う理由を整理し、みんなが納得できる落としどころを提案。
+4. structure（社会起業家）: 世の中の仕組みやお金・ルールの問題点を、専門用語を一切使わず、身近なたとえ話と簡単な言葉だけで構造的に解説。
+5. sage（賢者）: 高次の視点（一段高い精神的視点）から物事を俯瞰し、人間の弱さや思いやり、人類全体の精神的成長と気づきを慈愛に満ちた簡単な言葉で語りかける。
+6. lifestyle（エッセイスト）: 執着が一切なく、物事を気楽に受け流し、「まあ、なるようにしかならないさ」と風のように軽やかなユーモアで語る。
 
 【出力フォーマット】
 必ず以下の厳密なJSON形式のみで出力してください（Markdownのバッククォート等も含めないでください）：
@@ -83,15 +101,16 @@ def generate_kaleido_news():
 {{
   "articles": [
     {{
-      "id": 1,
-      "date": "ニュースの配信日時（RSSから取得した日付をそのまま記載）",
+      "date": "ニュースの配信日時",
       "title": "ニュースのタイトル",
       "summary": "ニュースの詳細な要約（300〜500字程度、わかりやすい言葉で）",
+      "public_reaction": "世間の反応についての解説（300〜500字程度、簡単な言葉で）",
       "columns": {{
         "history": "歴史学者としてのコメント（300〜500字程度、簡単な言葉で）",
         "mediator": "仲裁者としてのコメント（300〜500字程度、簡単な言葉で）",
-        "structure": "社会起業家としてのコメント（300〜500字程度、簡単な言葉で）",
-        "lifestyle": "エッセイストとしてのコメント（300〜500字程度、執着がなく達観したトーン、簡単な言葉で）"
+        "structure": "社会起業家としてのコメント（専門用語ゼロ、身近な例えと簡単な言葉で300〜500字程度）",
+        "sage": "賢者としてのコメント（慈愛と気づきを促す言葉で300〜500字程度）",
+        "lifestyle": "エッセイストとしてのコメント（執着がなく軽やかなトーンで300〜500字程度）"
       }}
     }}
   ]
@@ -112,17 +131,34 @@ def generate_kaleido_news():
                 }
             )
 
-            data = json.loads(response.text)
+            new_data = json.loads(response.text)
+            new_articles = new_data.get("articles", [])
+
+            # 過去の履歴と結合して、最大30件に絞り込む（新しいものを上/手前に配置）
+            combined_articles = new_articles + existing_articles
+            # タイトル重複をプログラム側でも最終チェック
+            unique_articles = []
+            seen = set()
+            for art in combined_articles:
+                t = art.get("title")
+                if t and t not in seen:
+                    seen.add(t)
+                    unique_articles.append(art)
+
+            # 最大30回分（30件）まで保持
+            final_articles = unique_articles[:30]
+
+            output_data = {"articles": final_articles}
             with open("news.json", "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-            print("news.json updated successfully!")
+                json.dump(output_data, f, ensure_ascii=False, indent=2)
+            print("news.json updated successfully with history (max 30 items)!")
             return
 
         except (ServerError, APIError) as e:
             print(f"サーバー混雑エラーが発生しました (試行 {attempt}回目): {e}")
             if attempt < max_retries:
                 wait_time = retry_delays[attempt - 1]
-                print(f"{wait_time}秒待機してサーバーの混雑緩和を待ちます...")
+                print(f"{wait_time}秒待機して再試行します...")
                 time.sleep(wait_time)
             else:
                 raise Exception("3回連続でサーバー混雑エラーが発生したため終了します。")
