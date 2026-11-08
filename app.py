@@ -23,7 +23,7 @@ st.markdown(
         border: 1px solid #00ffcc;
         padding: 20px;
         border-radius: 10px;
-        margin-bottom: 20px;
+        margin-bottom: 25px;
     }
     .date-badge {
         background-color: #ff007f;
@@ -32,6 +32,13 @@ st.markdown(
         border-radius: 4px;
         font-size: 0.8rem;
         font-weight: bold;
+    }
+    .reaction-box {
+        background-color: #1a233a;
+        border-left: 4px solid #ff007f;
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 15px;
     }
     </style>
     """,
@@ -49,7 +56,7 @@ def load_news():
 
 st.title("🔮 Kaleido [カレイド]")
 st.markdown(
-    "##### ――最新ニュースを4つのメタ認知視点（サイバー・アナリスト）で読み解く――"
+    "##### ――最新ニュースを多様なメタ認知視点と世間の反応で読み解く――"
 )
 st.markdown("---")
 
@@ -61,31 +68,34 @@ if not articles:
       "バックエンドの更新を実行するか、しばらくお待ちください。"
   )
 else:
-  # 年齢を完全に排除し、正しい画像ファイル名にマッピング
+  # ペルソナの定義（画像なし、新ペルソナ「賢者」を追加）
   persona_info = {
       "history": {
           "name": "歴史学者",
           "desc": "超長期的視点（10年後・100年後からの大局観）",
           "color": "#ffaa00",
-          "icon": "歴史学者_白背景.png",
       },
       "mediator": {
           "name": "仲裁者",
           "desc": "当事者間の隠れたニーズ整理・合意形成の支援",
           "color": "#00ccff",
-          "icon": "仲裁者_白背景.png",
       },
       "structure": {
           "name": "社会起業家",
-          "desc": "実利主義・課題解決思考・数字思考（共感性低）",
+          "desc": "身近な言葉とたとえ話による社会構造の分析",
           "color": "#ff0055",
-          "icon": "社会起業家_白背景.png",
+      },
+      "sage": {
+          "name": "賢者",
+          "desc": (
+              "高次の視点・人間への深い理解・知恵と慈愛による気づきの促進"
+          ),
+          "color": "#bf00ff",
       },
       "lifestyle": {
           "name": "エッセイスト",
-          "desc": "執着なく物事を受け流す、達観したユーモア",
+          "desc": "執着なく物事を受け流す、軽やかな達観ユーモア",
           "color": "#00ff66",
-          "icon": "エッセイスト_白背景.png",
       },
   }
 
@@ -103,9 +113,18 @@ else:
       st.subheader(article.get("title", "タイトルなし"))
       st.write(f"**【要約】** {article.get('summary', '')}")
 
+      # 最初の欄に「世間の反応」を追加
+      public_reaction = article.get("public_reaction", "")
+      if public_reaction:
+        st.markdown(
+            """<div class="reaction-box"><strong>👥【世間の反応】</strong><br>"""
+            f"{public_reaction}</div>",
+            unsafe_allow_html=True,
+        )
+
       st.markdown("---")
 
-      # 4人のペルソナタブ（年齢表示なし）
+      # 5人のペルソナタブ（顔写真は削除済み）
       columns_data = article.get("columns", {})
       tab_keys = list(persona_info.keys())
       tab_labels = [persona_info[k]["name"] for k in tab_keys]
@@ -116,19 +135,11 @@ else:
         with tabs[i]:
           p_info = persona_info[k]
 
-          # アイコン画像と視点説明を横並びに表示
-          col1, col2 = st.columns([1, 8])
-          with col1:
-            try:
-              st.image(p_info["icon"], width=60)
-            except Exception:
-              st.write("🖼️ 画像なし")
-          with col2:
-            st.markdown(
-                f"**【視点】** <span style='color:{p_info['color']}'>"
-                f"{p_info['desc']}</span>",
-                unsafe_allow_html=True,
-            )
+          st.markdown(
+              f"**【視点】** <span style='color:{p_info['color']}'>"
+              f"{p_info['desc']}</span>",
+              unsafe_allow_html=True,
+          )
 
           comment = columns_data.get(k, "コメントがありません。")
           st.markdown(f"> {comment}")
