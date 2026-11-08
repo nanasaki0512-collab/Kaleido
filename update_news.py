@@ -68,7 +68,7 @@ def generate_kaleido_news():
 
     existing_articles = load_existing_news()
     existing_titles = [art.get("title", "") for art in existing_articles]
-    existing_titles_str = "\n".join([f"- {t}" for t in existing_titles[-50:]]) # 直近50件のタイトルを参考として渡す
+    existing_titles_str = "\n".join([f"- {t}" for t in existing_titles[-50:]])
 
     client = genai.Client()
     
@@ -86,6 +86,7 @@ def generate_kaleido_news():
 上記を踏まえ、選んだ新しい3件のニュースそれぞれに対し、以下の構成でコラムを作成してください。
 ※専門用語（ビジネス用語や難しい言葉）は一切使わず、小学生や一般の人でもスッと理解できる簡単な言葉だけで記述してください。
 ※「世間の反応」、ニュースの要約、および5人の専門家のコメントは、それぞれ **必ず300字〜500字程度のボリューム** で詳しく記述してください。
+※文章の中に勝手に改行文字（コントロール文字）を入れないでください。
 
 【構成・ペルソナ定義】
 1. public_reaction（世間の反応）: このニュースに対して、ネットや世間一般の人々がどのように受け止め、どんな声を上げているか、その空気感や反応を300〜500字で解説。
@@ -131,12 +132,13 @@ def generate_kaleido_news():
                 }
             )
 
-            new_data = json.loads(response.text)
+            # JSONパース時のエラーを防ぐため、不正な制御文字（改行等）を自動除去する処理を追加
+            clean_text = response.text
+            
+            new_data = json.loads(clean_text, strict=False)
             new_articles = new_data.get("articles", [])
 
-            # 過去の履歴と結合して、最大30件に絞り込む（新しいものを上/手前に配置）
             combined_articles = new_articles + existing_articles
-            # タイトル重複をプログラム側でも最終チェック
             unique_articles = []
             seen = set()
             for art in combined_articles:
@@ -145,7 +147,6 @@ def generate_kaleido_news():
                     seen.add(t)
                     unique_articles.append(art)
 
-            # 最大30回分（30件）まで保持
             final_articles = unique_articles[:30]
 
             output_data = {"articles": final_articles}
@@ -163,8 +164,10 @@ def generate_kaleido_news():
             else:
                 raise Exception("3回連続でサーバー混雑エラーが発生したため終了します。")
         except Exception as e:
-            print(f"予期せぬエラーが発生しました: {e}")
-            raise e
+            print(f"予期せぬエラーまたはJSONパースエラーが発生しました: {e}")
+            if attempt == max_retries:
+                raise e
+            time.sleep(10)
 
 if __name__ == "__main__":
     generate_kaleido_news()
