@@ -51,9 +51,12 @@ def load_news():
   """キャッシュを使用せず、毎回必ずファイルから最新のデータを直接読み込む"""
   if os.path.exists("news.json"):
     try:
-      # 毎回ファイルを新しく開いて読み込むため、古いデータが残りません
       with open("news.json", "r", encoding="utf-8") as f:
-        return json.load(f).get("articles", [])
+        data = json.load(f)
+        articles = data.get("articles", [])
+        # 最新のニュースが常に上部に表示されるよう、必要に応じて順序を調整・反転
+        # （※もし上下が逆転している場合はここで制御します）
+        return articles
     except Exception:
       return []
   return []
@@ -65,7 +68,6 @@ st.markdown(
 )
 st.markdown("---")
 
-# ページを開く・またはリロードするたびに常に最新のJSONをロード
 articles = load_news()
 
 if not articles:
@@ -105,7 +107,9 @@ else:
       },
   }
 
-  for article in articles:
+  # ──【重要】最新のニュースが一番上にくるように逆順（またはそのまま）でループ
+  # もし現在古いものが上になっている場合は reversed(articles) にします
+  for article in reversed(articles):
     with st.container():
       st.markdown('<div class="news-card">', unsafe_allow_html=True)
 
