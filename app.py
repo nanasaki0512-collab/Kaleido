@@ -48,16 +48,16 @@ st.markdown(
 
 
 def load_news():
-  """キャッシュを使用せず、毎回必ずファイルから最新のデータを直接読み込む"""
+  """JSONファイルを直接開き、最新記事が配列の『最初（インデックス0）』に来るように整列して返す"""
   if os.path.exists("news.json"):
     try:
       with open("news.json", "r", encoding="utf-8") as f:
         data = json.load(f)
         articles = data.get("articles", [])
-        # 最新のニュースが常に上部に表示されるよう、必要に応じて順序を調整・反転
-        # （※もし上下が逆転している場合はここで制御します）
-        return articles
-    except Exception:
+        # news.json 内で新しいものが後ろに追加されている場合、ここで配列自体を反転して最新を先頭にする
+        return list(reversed(articles))
+    except Exception as e:
+      st.error(f"データ読み込みエラー: {e}")
       return []
   return []
 
@@ -68,6 +68,7 @@ st.markdown(
 )
 st.markdown("---")
 
+# 毎回最新順にソートされた記事配列を取得
 articles = load_news()
 
 if not articles:
@@ -107,9 +108,8 @@ else:
       },
   }
 
-  # ──【重要】最新のニュースが一番上にくるように逆順（またはそのまま）でループ
-  # もし現在古いものが上になっている場合は reversed(articles) にします
-  for article in reversed(articles):
+  # 先頭から順に描画（すでに load_news() で最新順に並び替え済み）
+  for article in articles:
     with st.container():
       st.markdown('<div class="news-card">', unsafe_allow_html=True)
 
