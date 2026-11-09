@@ -2,12 +2,16 @@ name: Update News
 
 on:
   schedule:
-    - cron: '59 19 * * *' # 毎日日本時間 朝4時59分 (UTC 19:59)
-  workflow_dispatch: # 手動でもすぐ実行できるようにする
+    - cron: '59 19 * * *'  # 毎日日本時間 朝4時59分 (UTC 19:59)
+  workflow_dispatch:        # 手動でもすぐ実行できるようにする
 
 jobs:
   update:
     runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -17,7 +21,6 @@ jobs:
         with:
           python-version: '3.10'
 
-      # ★ここで requirements.txt に書かれた部品（feedparserやgoogle-genai等）をインストールします
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -28,9 +31,11 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           python update_news.py
+          # ★ app.py のタイムスタンプを現在時刻に更新し、サーバーに「変更があった」と伝える
+          touch app.py
 
-      - name: Commit and push news.json
+      - name: Commit and push news.json and app.py
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
-          commit_message: "Auto-update news.json"
-          file_pattern: news.json
+          commit_message: "Auto-update news.json and trigger app reboot"
+          file_pattern: "news.json app.py"
